@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outbound Dialer Mastery | Industry Standards vs. NCC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12161A;
+    --panel: #1B2127;
+    --panel-raised: #212831;
+    --line: #2C343D;
+    --text: #E7ECEF;
+    --muted: #8B98A3;
+    --industry: #4FA3D1;
+    --industry-dim: rgba(79,163,209,0.12);
+    --ncc: #5FBF8F;
+    --ncc-dim: rgba(95,191,143,0.12);
+    --gap: #E0A73D;
+    --gap-dim: rgba(224,167,61,0.14);
+    --amber-led: #E0A73D;
+    --vendor: #B98BE0;
+    --vendor-dim: rgba(185,139,224,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 500px at 15% -10%, rgba(79,163,209,0.08), transparent 60%),
+      radial-gradient(900px 400px at 85% 0%, rgba(95,191,143,0.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 70px;}
+
+  /* header / wallboard strip */
+  header{
+    border:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel-raised),var(--panel));
+    border-radius:10px;
+    padding:26px 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::before{
+    content:"";
+    position:absolute; inset:0 0 auto 0; height:3px;
+    background:linear-gradient(90deg,var(--industry),var(--ncc) 38%,var(--vendor) 68%,var(--gap));
+  }
+  .eyebrow-row{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .led{width:8px;height:8px;border-radius:50%;background:var(--ncc);box-shadow:0 0 8px var(--ncc);animation:blink 2.4s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.04em;color:var(--muted);}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(28px,4vw,40px);
+    line-height:1.08;
+    margin:0 0 10px;
+    font-weight:700;
+    max-width:720px;
+  }
+  header p.sub{color:var(--muted); max-width:640px; margin:0; font-size:15.5px; line-height:1.55;}
+  .wallboard-stats{
+    display:flex; gap:28px; margin-top:22px; flex-wrap:wrap;
+    border-top:1px solid var(--line); padding-top:18px;
+  }
+  .stat{font-family:'IBM Plex Mono',monospace;}
+  .stat .num{font-size:22px; font-weight:600; color:var(--text); display:block;}
+  .stat .label{font-size:11.5px; color:var(--muted); letter-spacing:.03em;}
+
+  /* legend */
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin:22px 0 6px;}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted);}
+  .swatch{width:12px;height:12px;border-radius:3px;flex:none;}
+
+  /* filters */
+  .filters{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin:18px 0 26px;
+  }
+  .chip{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    padding:8px 13px;
+    border-radius:7px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--muted);
+    cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;
+    white-space:nowrap;
+  }
+  .chip:hover{color:var(--text); border-color:#3a4450;}
+  .chip.active{background:var(--panel-raised); color:var(--text); border-color:var(--industry);}
+
+  .progress-row{display:flex; align-items:center; gap:12px; margin-bottom:24px;}
+  .progress-track{flex:1; height:6px; background:var(--panel); border:1px solid var(--line); border-radius:99px; overflow:hidden;}
+  .progress-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--industry),var(--ncc)); transition:width .3s ease;}
+  .progress-text{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); white-space:nowrap;}
+
+  /* grid */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+  }
+  @media (max-width:920px){ .grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:620px){ .grid{grid-template-columns:1fr;} .wallboard-stats{gap:20px;} }
+
+  .card-slot{ perspective:1400px; min-height:190px; }
+  .card{
+    position:relative; width:100%; height:100%; min-height:190px;
+    transform-style:preserve-3d;
+    transition:transform .5s cubic-bezier(.2,.8,.2,1);
+    cursor:pointer;
+  }
+  .card.flipped{transform:rotateY(180deg);}
+  .face{
+    position:absolute; inset:0;
+    -webkit-backface-visibility:hidden; backface-visibility:hidden;
+    border-radius:10px;
+    border:1px solid var(--line);
+    padding:18px 18px 16px;
+    display:flex; flex-direction:column;
+  }
+  .face.front{background:var(--panel);}
+  .face.back{transform:rotateY(180deg); background:var(--panel-raised);}
+
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.04em;
+    padding:3px 8px; border-radius:5px; width:fit-content;
+    margin-bottom:12px;
+  }
+  .tag.industry{background:var(--industry-dim); color:var(--industry);}
+  .tag.ncc{background:var(--ncc-dim); color:var(--ncc);}
+  .tag.gap{background:var(--gap-dim); color:var(--gap);}
+  .tag.vendor{background:var(--vendor-dim); color:var(--vendor);}
+  .tag .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  .module-label{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:6px; letter-spacing:.03em;}
+  .q{font-family:'Space Grotesk',sans-serif; font-size:16.5px; font-weight:600; line-height:1.32; margin:0;}
+  .a{font-size:14px; line-height:1.55; color:#D7DEE3; margin:0;}
+  .flip-hint{
+    margin-top:auto; padding-top:10px; font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px; color:var(--muted); border-top:1px dashed var(--line);
+  }
+  .card-slot.hidden{display:none;}
+
+  footer{margin-top:46px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px; line-height:1.6;}
+  footer strong{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow-row"><span class="led"></span><span class="eyebrow">NCC ENABLEMENT · OUTBOUND DIALER TRAINING</span></div>
+    <h1>Outbound Dialer Mastery</h1>
+    <p class="sub">One deck, two lenses. Every card is tagged industry standard, NCC capability, or tuning gap &mdash; the spots where NCC's dialer needs extra configuration to meet the industry bar. Flip a card to reveal the answer.</p>
+    <div class="wallboard-stats">
+      <div class="stat"><span class="num">41</span><span class="label">CARDS</span></div>
+      <div class="stat"><span class="num">10</span><span class="label">MODULES</span></div>
+      <div class="stat"><span class="num">3%</span><span class="label">TCPA ABANDON CAP</span></div>
+      <div class="stat"><span class="num">9</span><span class="label">TUNING GAPS FLAGGED</span></div>
+    </div>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch" style="background:var(--industry)"></span>Industry standard / best practice</div>
+    <div class="legend-item"><span class="swatch" style="background:var(--ncc)"></span>NCC built-in capability</div>
+    <div class="legend-item"><span class="swatch" style="background:var(--vendor)"></span>outboundANI &mdash; our number reputation partner</div>
+    <div class="legend-item"><span class="swatch" style="background:var(--gap)"></span>Tuning gap &mdash; NCC needs extra work here</div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="progress-row">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">0 / 36 reviewed</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <strong>How to use this deck:</strong> work module by module with a rep, not card by card &mdash; each module ends with a tuning-gap card that turns the theory into a discovery question to ask a prospect. Re-run the "GAP" filter on its own before any competitive call.
+  </footer>
+</div>
+
+<script>
+const CARDS = [
+  // Dialing Modes & Pacing
+  {mod:"Dialing Modes", q:"What is a predictive dialer, in one line?", a:"An algorithm dials multiple numbers ahead of agent availability, forecasting off average handle time, wrap time, and answer rates, to minimize agent idle time. Built for high-volume, large-list campaigns.", tag:"industry"},
+  {mod:"Dialing Modes", q:"How does NCC's Predictive mode work?", a:"It forecasts agent availability and dials several numbers at once, screening out busy signals, no-answers, and voicemail so agents are only ever connected to live answers.", tag:"ncc"},
+  {mod:"Dialing Modes", q:"Preview vs. Progressive vs. QuarterBack Mode &mdash; what's the difference in NCC?", a:"Preview: the agent reviews the record before manually placing the call (near-zero abandonment). Progressive: one call per available agent, gated by agent status. QuarterBack Mode: an NCC-specific pacing mode that, like Predictive, also supports Answer Machine Detection.", tag:"ncc"},
+  {mod:"Dialing Modes", q:"When should a rep steer a customer away from predictive dialing?", a:"Small lists, high-value or VIP accounts, and sensitive outreach (collections, healthcare, legal) &mdash; predictive pacing carries the highest abandonment risk of any dialing mode.", tag:"industry"},
+  {mod:"Dialing Modes", q:"GAP: matching mode to list size", a:"NCC offers all the modes, but choosing the right one for the list is a configuration decision, not a platform default. An undersized list run in Predictive Mode will blow through the abandonment cap fast &mdash; ask about list size before recommending a mode.", tag:"gap"},
+
+  // Pacing & Compliance
+  {mod:"Pacing & Compliance", q:"What is the TCPA/FTC \"3% rule\"?", a:"Abandoned calls are capped at 3% of live-answered calls, measured per campaign over a rolling 30-day window &mdash; not blended across a customer's total outbound activity.", tag:"industry"},
+  {mod:"Pacing & Compliance", q:"What legally counts as an \"abandoned call\"?", a:"A live person answers, but no agent connects within 2 seconds of their completed greeting.", tag:"industry"},
+  {mod:"Pacing & Compliance", q:"What's the minimum ring time before a dialer can give up on an unanswered call?", a:"15 seconds or 4 rings, whichever is longer. Cutting ring time to squeeze in more dials per hour breaks the compliance safe harbor.", tag:"industry"},
+  {mod:"Pacing & Compliance", q:"How does NCC control abandonment per campaign?", a:"Each Outbound Campaign has an admin-set Max Dial Ratio and Abandon Percentage &mdash; configured per campaign at setup.", tag:"ncc"},
+  {mod:"Pacing & Compliance", q:"GAP: static settings vs. adaptive pacing", a:"NCC's Max Dial Ratio and Abandon % are fixed admin settings, not a self-adjusting real-time algorithm. If answer rates shift mid-campaign, the ratio doesn't re-tune itself &mdash; supervisors need to watch the Outbound Dialer Summary Report daily and hand-adjust, not set-and-forget.", tag:"gap"},
+  {mod:"Pacing & Compliance", q:"What calling-hour windows apply?", a:"Federal TCPA windows run 8am&ndash;9pm in the recipient's local time zone. Several states set tighter limits (e.g., Oregon cuts off at 8pm) &mdash; multi-state campaigns should default to the strictest applicable window.", tag:"industry"},
+
+  // DNC & Scrubbing
+  {mod:"DNC & Scrubbing", q:"What is Prior Express Written Consent (PEWC)?", a:"Documented consent captured before the very first automated dial to a cell number &mdash; timestamp, disclosure language, and proof of opt-in. A verbal agreement alone doesn't satisfy it.", tag:"industry"},
+  {mod:"DNC & Scrubbing", q:"Real-time vs. batch DNC scrubbing &mdash; why does it matter?", a:"Best practice scrubs every number against federal/state DNC and litigator lists immediately pre-dial, not just once when the list is first loaded.", tag:"industry"},
+  {mod:"DNC & Scrubbing", q:"What scrub tooling does NCC provide?", a:"A Temporary DNC list feature and an Outbound Scrub Summary Report that gives visibility into which records were scrubbed and why.", tag:"ncc"},
+  {mod:"DNC & Scrubbing", q:"What are verifyConsentOnDial and scrubOnDial?", a:"Campaign-level flags in NCC that can be toggled to enforce a consent check and a scrub pass before a given number is dialed.", tag:"ncc"},
+  {mod:"DNC & Scrubbing", q:"GAP: who keeps the registry current?", a:"NCC scrubs against whatever DNC/litigator lists are loaded into the tenant &mdash; it doesn't auto-sync the federal registry (which updates daily) on its own. Confirm the customer's refresh cadence during discovery, not after go-live.", tag:"gap"},
+
+  // Answer Machine Detection
+  {mod:"Answer Machine Detection", q:"How does answering machine detection (AMD) work?", a:"The system analyzes the greeting's tone pattern and silence duration to tell a live human from voicemail before connecting an agent. Modern AI/ML-based AMD improves real-world accuracy over pure silence-timing heuristics.", tag:"industry"},
+  {mod:"Answer Machine Detection", q:"Where does AMD live in NCC?", a:"It's available exclusively on Predictive and QuarterBack Mode campaigns. Admins tune the human/machine detection timers directly &mdash; e.g., shortening the initial-silence threshold shortens how long the system waits before returning an \"unknown\" result.", tag:"ncc"},
+  {mod:"Answer Machine Detection", q:"What outcomes can an NCC dial resolve to?", a:"Human, Busy, No Answer, Dialer Abandon, Answer Machine, Invalid Number, or Fax &mdash; each can trigger its own next action, like scheduling a callback or firing a workflow.", tag:"ncc"},
+  {mod:"Answer Machine Detection", q:"GAP: timer-based vs. self-learning AMD", a:"NCC's AMD is timer/silence-based and admin-tunable, not a self-learning AI/ML model. Expect a manual tuning pass per campaign or vertical &mdash; voicemail greeting styles vary a lot by industry &mdash; to hit the accuracy levels AI-native AMD reaches out of the box.", tag:"gap"},
+
+  // Caller ID Reputation
+  {mod:"Caller ID Reputation", q:"What is STIR/SHAKEN?", a:"A carrier-level framework that cryptographically signs outbound caller ID so receiving carriers can verify the number is legitimately yours. The strongest tier is A-level (full) attestation.", tag:"industry"},
+  {mod:"Caller ID Reputation", q:"Why can a legitimate number still get flagged as spam?", a:"Carrier and third-party analytics engines label numbers based on calling patterns &mdash; high volume or a high abandonment rate can look identical to a robocall pattern from a network-traffic view, independent of STIR/SHAKEN status.", tag:"industry"},
+  {mod:"Caller ID Reputation", q:"GAP: does NCC own attestation and reputation monitoring?", a:"NCC's outbound calling relies on the carrier/SBC layer for STIR/SHAKEN signing rather than owning attestation and reputation scoring natively. That's exactly why a dedicated remediation motion exists on top of the platform.", tag:"gap"},
+  {mod:"Caller ID Reputation", q:"What does the spam-remediation playbook look like?", a:"Check the current attestation level, request re-scoring through the labeling services, and rotate or diversify caller ID as needed &mdash; alongside direct carrier engagement.", tag:"ncc"},
+
+  // Live Monitoring
+  {mod:"Live Monitoring", q:"What are monitor / whisper / barge?", a:"Monitor: supervisor listens silently. Whisper: supervisor coaches the agent without the customer hearing. Barge: supervisor joins the call directly. Table-stakes QA features on most modern CCaaS dialers.", tag:"industry"},
+  {mod:"Live Monitoring", q:"How does live call monitoring work in NCC?", a:"Supervisors can listen in on an agent's live call directly from the User Dashboard.", tag:"ncc"},
+  {mod:"Live Monitoring", q:"GAP: is whisper/barge native to the NCC Dialer?", a:"In at least one documented deployment, whisper/barge was delivered through existing UC feature access codes (FAC) rather than being native to the NCC Dialer itself. Call this out explicitly in discovery so both UC and NCC licensing/routing get scoped correctly.", tag:"gap"},
+
+  // Reporting
+  {mod:"Reporting & Analytics", q:"What are the baseline outbound KPIs?", a:"Connect rate, right-party contact rate, abandonment percentage, and average pacing ratio &mdash; the starting point for any outbound compliance or performance review.", tag:"industry"},
+  {mod:"Reporting & Analytics", q:"What outbound reports does NCC provide?", a:"Outbound Dialer Summary, Outbound List Disposition Summary, Outbound Scrub Summary, and the Outbound Lists Dashboard &mdash; real-time and historical views of dial outcomes, list health, and scrub activity.", tag:"ncc"},
+  {mod:"Reporting & Analytics", q:"GAP: campaign-level vs. tenant-wide reporting", a:"Since the 3% cap is enforced per campaign, a blended view across all outbound activity can hide one hot campaign sitting well above threshold. Review NCC's summary reports at the campaign level, not tenant-wide.", tag:"gap"},
+
+  // List & Campaign Management
+  {mod:"List Management", q:"What do modern outbound stacks expect for list management?", a:"Programmatic list injection and removal via API, so leads can be added, requeued, or pulled without a manual re-upload.", tag:"industry"},
+  {mod:"List Management", q:"How are campaign lists managed in NCC today?", a:"Through Campaign configuration &mdash; setting the mix of new leads, callbacks, and third-party callbacks &mdash; managed largely through the admin UI and file-upload style workflows.", tag:"ncc"},
+  {mod:"List Management", q:"GAP: can you inject a lead into a live campaign via API?", a:"As of the current NCC WFM/Campaign API surface, there's no confirmed write endpoint for adding a number to a live campaign dial list. If a deal's use case depends on real-time lead injection (e.g., a web form triggering an immediate outbound attempt), flag that gap early.", tag:"gap"},
+
+  // Campaign Types & Blending
+  {mod:"Campaign Types", q:"What campaign types does NCC support?", a:"Inbound, Outbound, Blended, Email, SMS, and Chat &mdash; all sharing the same underlying queue, agent, and workflow model, so agents can flex between inbound and outbound inside a Blended campaign.", tag:"ncc"},
+  {mod:"Campaign Types", q:"What's the industry expectation for blended agent pacing?", a:"Blending keeps agent utilization high, but outbound pacing must back off automatically when inbound queues spike &mdash; a discipline to configure regardless of platform.", tag:"industry"},
+
+  // outboundANI (number reputation partner)
+  {mod:"outboundANI", q:"What is outboundANI?", a:"Our number-reputation and remediation partner (outboundiq.com). It goes beyond basic STIR/SHAKEN signing to actively manage the health of an outbound program's entire ANI (Automatic Number Identification) inventory.", tag:"vendor"},
+  {mod:"outboundANI", q:"How does outboundANI decide which number to dial from?", a:"Machine learning selects the best-performing ANI from the customer's owned number inventory for each individual dial, and adjusts strategy in real time based on outcomes &mdash; replacing manual number rotation and swapping.", tag:"vendor"},
+  {mod:"outboundANI", q:"What do outboundANI's inventory tools do?", a:"They automatically scan the contact center platform for the customer's proprietary phone numbers, then enroll them in outboundANI's recurring carrier registration service.", tag:"vendor"},
+  {mod:"outboundANI", q:"What does the Remediation Center actually do?", a:"It's the operational engine behind number-reputation remediation &mdash; working alongside labeling and analytics providers like Hiya and First Orion to get wrongly-flagged numbers re-scored and back in good standing.", tag:"vendor"},
+  {mod:"outboundANI", q:"What visibility does outboundANI give supervisors?", a:"Real-time contact and success rates broken out by ANI, time of day, location, agent, and dialer campaign, plus disposition stats and historical trending &mdash; so a rep can see exactly which numbers are underperforming.", tag:"vendor"},
+  {mod:"outboundANI", q:"GAP: why does an NCC deal need outboundANI at all?", a:"This is precisely the layer NCC's dialer doesn't own natively (see the Caller ID Reputation module &mdash; carrier/SBC-level signing only, no built-in reputation scoring or ANI optimization). outboundANI is the standing answer to that gap for Nextiva customers &mdash; position it as part of the standard outbound stack, not a one-off fix.", tag:"gap"},
+];
+
+const grid = document.getElementById('grid');
+const filtersEl = document.getElementById('filters');
+const modules = ["All", ...Array.from(new Set(CARDS.map(c=>c.mod)))];
+let activeFilter = "All";
+let reviewed = new Set();
+
+function tagLabel(t){
+  if(t === 'industry') return 'Industry Standard';
+  if(t === 'ncc') return 'NCC Capability';
+  if(t === 'vendor') return 'outboundANI';
+  return 'Tuning Gap';
+}
+
+function render(){
+  grid.innerHTML = "";
+  CARDS.forEach((c, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'card-slot' + (activeFilter !== "All" && c.mod !== activeFilter ? ' hidden' : '');
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="face front">
+        <div class="module-label">${c.mod.toUpperCase()}</div>
+        <p class="q">${c.q}</p>
+        <div class="flip-hint">TAP TO REVEAL &rarr;</div>
+      </div>
+      <div class="face back">
+        <span class="tag ${c.tag}"><span class="dot"></span>${tagLabel(c.tag)}</span>
+        <p class="a">${c.a}</p>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      card.classList.toggle('flipped');
+      if(!reviewed.has(i)){ reviewed.add(i); updateProgress(); }
+    });
+    slot.appendChild(card);
+    grid.appendChild(slot);
+  });
+}
+
+function updateProgress(){
+  document.getElementById('progressFill').style.width = (reviewed.size / CARDS.length * 100) + '%';
+  document.getElementById('progressText').textContent = `${reviewed.size} / ${CARDS.length} reviewed`;
+}
+
+function renderFilters(){
+  filtersEl.innerHTML = "";
+  modules.forEach(m => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (m === activeFilter ? ' active' : '');
+    chip.textContent = m === "All" ? "All modules" : m;
+    chip.addEventListener('click', () => { activeFilter = m; renderFilters(); render(); });
+    filtersEl.appendChild(chip);
+  });
+}
+
+renderFilters();
+render();
+updateProgress();
+</script>
+</body>
+</html>
